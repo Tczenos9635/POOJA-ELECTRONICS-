@@ -1,0 +1,292 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Mobile spare part inventory item stored in Firestore for real-time cross-installation stock and compatibility synchronization.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the shop owner who owns this inventory item."
+        },
+        "productName": {
+          "type": "string",
+          "description": "Display title of the spare part product."
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "TEMPERED_GLASS",
+            "BACK_COVER",
+            "COMBO_DISPLAY",
+            "CC_BOARD",
+            "BATTERY",
+            "MIDDLE_FRAME",
+            "CAMERA_RING"
+          ],
+          "description": "Spare part category enum name."
+        },
+        "mainModel": {
+          "type": "string",
+          "description": "Primary mobile model name."
+        },
+        "brand": {
+          "type": "string",
+          "description": "Normalized mobile brand name."
+        },
+        "screenSize": {
+          "type": "string",
+          "description": "Optional screen size specification such as 6.57\"."
+        },
+        "stockQuantity": {
+          "type": "integer",
+          "description": "Current stock quantity on hand (non-negative integer)."
+        },
+        "minimumStock": {
+          "type": "integer",
+          "description": "Low-stock alert threshold (non-negative integer)."
+        },
+        "boxNumber": {
+          "type": "string",
+          "description": "Physical rack, bin, or box number such as B-023."
+        },
+        "universalGroupId": {
+          "type": "string",
+          "description": "Linked universal model group code such as TG-001, or empty string if unlinked."
+        },
+        "compatibleModels": {
+          "type": "array",
+          "description": "List of compatible mobile model names sharing this spare part."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional shop notes or quality remarks."
+        },
+        "isPublished": {
+          "type": "boolean",
+          "description": "True only for globally shared catalog items published by a verified admin; false for user-scoped shop inventory."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp()) when created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp()) when last updated."
+        }
+      },
+      "required": [
+        "userId",
+        "productName",
+        "category",
+        "mainModel",
+        "brand",
+        "screenSize",
+        "stockQuantity",
+        "minimumStock",
+        "boxNumber",
+        "universalGroupId",
+        "compatibleModels",
+        "notes",
+        "isPublished",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UniversalModel": {
+      "title": "UniversalModel",
+      "description": "Universal compatibility model group linking multiple mobile models to a single physical spare part, synchronized in real time.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the creator who owns this universal model group."
+        },
+        "updatedByUid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user or verified admin who last updated this group."
+        },
+        "groupCode": {
+          "type": "string",
+          "description": "Universal compatibility code such as TG-001 or CC-004."
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "TEMPERED_GLASS",
+            "BACK_COVER",
+            "COMBO_DISPLAY",
+            "CC_BOARD",
+            "BATTERY",
+            "MIDDLE_FRAME",
+            "CAMERA_RING"
+          ],
+          "description": "Spare part category enum name."
+        },
+        "mainModel": {
+          "type": "string",
+          "description": "Primary mobile model name."
+        },
+        "brand": {
+          "type": "string",
+          "description": "Extracted or normalized mobile brand name."
+        },
+        "screenSize": {
+          "type": "string",
+          "description": "Optional screen size specification such as 6.57\"."
+        },
+        "compatibleModels": {
+          "type": "array",
+          "description": "List of compatible mobile model names sharing the same physical spare part."
+        },
+        "releaseNote": {
+          "type": "string",
+          "description": "Optional update note describing compatibility changes."
+        },
+        "isPublished": {
+          "type": "boolean",
+          "description": "True when published globally to all installations by a verified admin; false when private to userId installations."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp()) when created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp()) when last updated."
+        }
+      },
+      "required": [
+        "userId",
+        "updatedByUid",
+        "groupCode",
+        "category",
+        "mainModel",
+        "brand",
+        "screenSize",
+        "compatibleModels",
+        "releaseNote",
+        "isPublished",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "OfficialUniversalGroup": {
+      "title": "OfficialUniversalGroup",
+      "description": "Official spare parts universal compatibility group published by the shop admin and synced to all app users.",
+      "type": "object",
+      "properties": {
+        "groupCode": {
+          "type": "string",
+          "description": "Human-readable universal compatibility code such as TG-001 or CR-001."
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "TEMPERED_GLASS",
+            "BACK_COVER",
+            "COMBO_DISPLAY",
+            "CC_BOARD",
+            "BATTERY",
+            "MIDDLE_FRAME",
+            "CAMERA_RING"
+          ],
+          "description": "Spare part category enum name."
+        },
+        "mainModel": {
+          "type": "string",
+          "description": "Primary mobile model name."
+        },
+        "brand": {
+          "type": "string",
+          "description": "Extracted or normalized mobile brand name."
+        },
+        "screenSize": {
+          "type": "string",
+          "description": "Optional screen size string such as 6.57\"."
+        },
+        "compatibleModels": {
+          "type": "array",
+          "description": "List of compatible mobile model names sharing the same physical part."
+        },
+        "releaseNote": {
+          "type": "string",
+          "description": "Optional official update note shown to users."
+        },
+        "isPublished": {
+          "type": "boolean",
+          "description": "Whether this official compatibility group is published globally."
+        },
+        "updatedByUid": {
+          "type": "string",
+          "description": "UID of the verified admin who published or last updated this document."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp()) when published."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp()) when last updated."
+        }
+      },
+      "required": [
+        "groupCode",
+        "category",
+        "mainModel",
+        "brand",
+        "screenSize",
+        "compatibleModels",
+        "releaseNote",
+        "isPublished",
+        "updatedByUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminMarker": {
+      "title": "AdminMarker",
+      "description": "Optional admin allowlist marker document keyed by admin UID.",
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string",
+          "description": "Admin role label."
+        }
+      },
+      "required": ["role"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": {
+        "$ref": "#/entities/Product"
+      },
+      "description": "Real-time synchronized spare part inventory products scoped per authenticated user across installations, plus verified admin global catalog items."
+    },
+    "/universal_models/{modelId}": {
+      "schema": {
+        "$ref": "#/entities/UniversalModel"
+      },
+      "description": "Real-time synchronized universal compatibility model groups supporting user-scoped sync across installations and verified admin global broadcasts."
+    },
+    "/official_universal_groups/{groupId}": {
+      "schema": {
+        "$ref": "#/entities/OfficialUniversalGroup"
+      },
+      "description": "Global official universal spare parts compatibility groups readable by all signed-in users and writable strictly by verified admins."
+    },
+    "/admins/{adminUid}": {
+      "schema": {
+        "$ref": "#/entities/AdminMarker"
+      },
+      "description": "Server-managed admin allowlist markers."
+    }
+  }
+}

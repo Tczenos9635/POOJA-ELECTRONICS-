@@ -1,0 +1,6 @@
+{
+  "name": "Pooja Electronics",
+  "description": "Mobile repair shop spare parts compatibility finder and stock inventory manager for Pooja Electronics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,215 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: deny all reads and writes by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email == 'sbstudio17@gmail.com' && request.auth.token.email_verified == true) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidCategory(cat) {
+      return cat in [
+        'TEMPERED_GLASS',
+        'BACK_COVER',
+        'COMBO_DISPLAY',
+        'CC_BOARD',
+        'BATTERY',
+        'MIDDLE_FRAME',
+        'CAMERA_RING'
+      ];
+    }
+
+    function isValidProduct(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.productName is string && data.productName.size() >= 1 && data.productName.size() <= 120 &&
+             isValidCategory(data.category) &&
+             data.mainModel is string && data.mainModel.size() >= 1 && data.mainModel.size() <= 100 &&
+             data.brand is string && data.brand.size() >= 1 && data.brand.size() <= 60 &&
+             data.screenSize is string && data.screenSize.size() <= 32 &&
+             data.stockQuantity is int && data.stockQuantity >= 0 && data.stockQuantity <= 1000000 &&
+             data.minimumStock is int && data.minimumStock >= 0 && data.minimumStock <= 1000000 &&
+             data.boxNumber is string && data.boxNumber.size() <= 32 &&
+             data.universalGroupId is string && data.universalGroupId.size() <= 32 &&
+             data.compatibleModels is list && data.compatibleModels.size() <= 100 &&
+             (data.compatibleModels.size() == 0 || data.compatibleModels[0] is string) &&
+             data.notes is string && data.notes.size() <= 500 &&
+             data.isPublished is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidUniversalModel(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.updatedByUid is string && data.updatedByUid == request.auth.uid &&
+             data.groupCode is string && data.groupCode.size() >= 2 && data.groupCode.size() <= 32 &&
+             isValidCategory(data.category) &&
+             data.mainModel is string && data.mainModel.size() >= 1 && data.mainModel.size() <= 100 &&
+             data.brand is string && data.brand.size() >= 1 && data.brand.size() <= 60 &&
+             data.screenSize is string && data.screenSize.size() <= 32 &&
+             data.compatibleModels is list && data.compatibleModels.size() <= 100 &&
+             (data.compatibleModels.size() == 0 || data.compatibleModels[0] is string) &&
+             data.releaseNote is string && data.releaseNote.size() <= 200 &&
+             data.isPublished is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidOfficialUniversalGroup(data) {
+      return data.groupCode is string && data.groupCode.size() >= 2 && data.groupCode.size() <= 32 &&
+             isValidCategory(data.category) &&
+             data.mainModel is string && data.mainModel.size() >= 1 && data.mainModel.size() <= 100 &&
+             data.brand is string && data.brand.size() >= 1 && data.brand.size() <= 60 &&
+             data.screenSize is string && data.screenSize.size() <= 32 &&
+             data.compatibleModels is list && data.compatibleModels.size() <= 100 &&
+             (data.compatibleModels.size() == 0 || data.compatibleModels[0] is string) &&
+             data.releaseNote is string && data.releaseNote.size() <= 200 &&
+             data.isPublished is bool && data.isPublished == true &&
+             data.updatedByUid is string && data.updatedByUid == request.auth.uid &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /products/{productId} {
+      allow get: if isSignedIn() && isValidId(productId) &&
+                    (existing().userId == request.auth.uid || existing().isPublished == true || isAdmin());
+      allow list: if isSignedIn() &&
+                     (existing().userId == request.auth.uid || existing().isPublished == true);
+
+      allow create: if isSignedIn() &&
+                       isValidId(productId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'productName', 'category', 'mainModel', 'brand',
+                         'screenSize', 'stockQuantity', 'minimumStock', 'boxNumber',
+                         'universalGroupId', 'compatibleModels', 'notes', 'isPublished',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'productName', 'category', 'mainModel', 'brand',
+                         'screenSize', 'stockQuantity', 'minimumStock', 'boxNumber',
+                         'universalGroupId', 'compatibleModels', 'notes', 'isPublished',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidProduct(incoming()) &&
+                       incoming().userId == request.auth.uid &&
+                       (incoming().isPublished == false || isAdmin());
+
+      allow update: if isSignedIn() &&
+                       isValidId(productId) &&
+                       isValidProduct(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'productName', 'category', 'mainModel', 'brand', 'screenSize',
+                         'stockQuantity', 'minimumStock', 'boxNumber', 'universalGroupId',
+                         'compatibleModels', 'notes', 'isPublished', 'updatedAt'
+                       ]) &&
+                       (existing().userId == request.auth.uid || isAdmin()) &&
+                       (incoming().isPublished == false || isAdmin());
+
+      allow delete: if isSignedIn() &&
+                       isValidId(productId) &&
+                       (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /universal_models/{modelId} {
+      allow get: if isSignedIn() && isValidId(modelId) &&
+                    (existing().userId == request.auth.uid || existing().isPublished == true || isAdmin());
+      allow list: if isSignedIn() &&
+                     (existing().userId == request.auth.uid || existing().isPublished == true);
+
+      allow create: if isSignedIn() &&
+                       isValidId(modelId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'updatedByUid', 'groupCode', 'category', 'mainModel',
+                         'brand', 'screenSize', 'compatibleModels', 'releaseNote',
+                         'isPublished', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'updatedByUid', 'groupCode', 'category', 'mainModel',
+                         'brand', 'screenSize', 'compatibleModels', 'releaseNote',
+                         'isPublished', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUniversalModel(incoming()) &&
+                       incoming().userId == request.auth.uid &&
+                       (incoming().isPublished == false || isAdmin());
+
+      allow update: if isSignedIn() &&
+                       isValidId(modelId) &&
+                       isValidUniversalModel(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'updatedByUid', 'groupCode', 'category', 'mainModel', 'brand',
+                         'screenSize', 'compatibleModels', 'releaseNote', 'isPublished',
+                         'updatedAt'
+                       ]) &&
+                       (existing().userId == request.auth.uid || isAdmin()) &&
+                       (incoming().isPublished == false || isAdmin());
+
+      allow delete: if isSignedIn() &&
+                       isValidId(modelId) &&
+                       (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /official_universal_groups/{groupId} {
+      allow get: if isSignedIn() && isValidId(groupId) && (existing().isPublished == true || isAdmin());
+      allow list: if isSignedIn() && existing().isPublished == true;
+
+      allow create: if isSignedIn() &&
+                       isValidId(groupId) &&
+                       incoming().keys().hasAll([
+                         'groupCode', 'category', 'mainModel', 'brand', 'screenSize',
+                         'compatibleModels', 'releaseNote', 'isPublished', 'updatedByUid',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'groupCode', 'category', 'mainModel', 'brand', 'screenSize',
+                         'compatibleModels', 'releaseNote', 'isPublished', 'updatedByUid',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidOfficialUniversalGroup(incoming()) &&
+                       isAdmin();
+
+      allow update: if isSignedIn() &&
+                       isValidId(groupId) &&
+                       isValidOfficialUniversalGroup(incoming()) &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'groupCode', 'category', 'mainModel', 'brand', 'screenSize',
+                         'compatibleModels', 'releaseNote', 'isPublished', 'updatedByUid',
+                         'updatedAt'
+                       ]) &&
+                       isAdmin();
+
+      allow delete: if isSignedIn() && isValidId(groupId) && isAdmin();
+    }
+
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && isValidId(adminUid) && request.auth.uid == adminUid;
+      allow list, create, update, delete: if false;
+    }
+  }
+}
