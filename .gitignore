@@ -16,4 +16,11 @@
 local.properties
 .env
 debug.keystore
+debug.keystore.base64
+*.jks
+*.keystore
+*.apk
+.build-outputs/
+.aistudio/
+app/google-services.json
 *-debug.log
