@@ -90,7 +90,7 @@ fun ShopNavHost(
   viewModel: ShopViewModel,
   aiChatViewModel: AiChatViewModel,
   partLensViewModel: PartLensViewModel,
-  onSignOut: () -> Unit,
+  onSignOut: (() -> Unit)?,
   modifier: Modifier = Modifier,
 ) {
   val navController = rememberNavController()

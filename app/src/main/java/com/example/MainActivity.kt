@@ -29,6 +29,7 @@ import com.example.ui.ShopViewModelFactory
 import com.example.ui.navigation.ShopNavHost
 import com.example.ui.theme.PoojaElectronicsTheme
 import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -43,60 +44,96 @@ class MainActivity : ComponentActivity() {
 
     setContent {
       PoojaElectronicsTheme {
-        val auth = remember { Firebase.auth }
-        val currentUser by auth.authStateFlow().collectAsStateWithLifecycle(initialValue = auth.currentUser)
-        val user = currentUser
+        val context = LocalContext.current
+        val isFirebaseConfigured = remember {
+          FirebaseApp.getApps(context).isNotEmpty() ||
+            runCatching { FirebaseApp.initializeApp(context) != null }.getOrDefault(false)
+        }
 
-        if (user == null) {
-          AuthScreen(onAuthSuccess = {})
+        if (!isFirebaseConfigured) {
+          val localRepo = remember {
+            InventoryRepository(AppDatabase.getInstance(context.applicationContext))
+          }
+          val localShopViewModel: ShopViewModel = viewModel(
+            key = "shop_local",
+            factory = ShopViewModelFactory(
+              repository = localRepo,
+              officialCatalogRepository = null,
+              currentUserEmail = null,
+              initialIsAdmin = false,
+              enableCloudSync = false,
+            ),
+          )
+          val aiChatViewModel: AiChatViewModel = viewModel(
+            key = "ai_local",
+            factory = AiChatViewModelFactory(localRepo),
+          )
+          val partLensViewModel: PartLensViewModel = viewModel(
+            key = "lens_local",
+            factory = PartLensViewModelFactory(localRepo),
+          )
+
+          ShopNavHost(
+            viewModel = localShopViewModel,
+            aiChatViewModel = aiChatViewModel,
+            partLensViewModel = partLensViewModel,
+            onSignOut = null,
+          )
         } else {
-          val context = LocalContext.current
-          val scope = rememberCoroutineScope()
-          val credentialManager = remember { CredentialManager.create(context) }
+          val auth = remember { Firebase.auth }
+          val currentUser by auth.authStateFlow().collectAsStateWithLifecycle(initialValue = auth.currentUser)
+          val user = currentUser
 
-          key(user.uid) {
-            val repositoryBundle = remember(user.uid) {
-              val appContext = context.applicationContext
-              val databaseId = appContext.getString(R.string.firestore_database_id)
-              val firestore = FirebaseFirestore.getInstance(databaseId)
-              val officialRepo = OfficialCatalogRepository(db = firestore, auth = auth)
-              val cloudSyncRepo = ShopCloudSyncRepository(db = firestore, auth = auth)
-              val roomDb = AppDatabase.getInstance(appContext)
-              val inventoryRepo = InventoryRepository(roomDb, officialRepo, cloudSyncRepo)
-              Triple(inventoryRepo, officialRepo, officialRepo.isCurrentUserAdmin())
+          if (user == null) {
+            AuthScreen(onAuthSuccess = {})
+          } else {
+            val scope = rememberCoroutineScope()
+            val credentialManager = remember { CredentialManager.create(context) }
+
+            key(user.uid) {
+              val repositoryBundle = remember(user.uid) {
+                val appContext = context.applicationContext
+                val databaseId = appContext.getString(R.string.firestore_database_id)
+                val firestore = FirebaseFirestore.getInstance(databaseId)
+                val officialRepo = OfficialCatalogRepository(db = firestore, auth = auth)
+                val cloudSyncRepo = ShopCloudSyncRepository(db = firestore, auth = auth)
+                val roomDb = AppDatabase.getInstance(appContext)
+                val inventoryRepo = InventoryRepository(roomDb, officialRepo, cloudSyncRepo)
+                Triple(inventoryRepo, officialRepo, officialRepo.isCurrentUserAdmin())
+              }
+
+              val (inventoryRepo, officialRepo, initialIsAdmin) = repositoryBundle
+              val shopViewModel: ShopViewModel = viewModel(
+                key = "shop_${user.uid}",
+                factory = ShopViewModelFactory(
+                  repository = inventoryRepo,
+                  officialCatalogRepository = officialRepo,
+                  currentUserEmail = user.email,
+                  initialIsAdmin = initialIsAdmin,
+                  enableCloudSync = true,
+                ),
+              )
+              val aiChatViewModel: AiChatViewModel = viewModel(
+                key = "ai_${user.uid}",
+                factory = AiChatViewModelFactory(inventoryRepo),
+              )
+              val partLensViewModel: PartLensViewModel = viewModel(
+                key = "lens_${user.uid}",
+                factory = PartLensViewModelFactory(inventoryRepo),
+              )
+
+              ShopNavHost(
+                viewModel = shopViewModel,
+                aiChatViewModel = aiChatViewModel,
+                partLensViewModel = partLensViewModel,
+                onSignOut = {
+                  signOutUser(
+                    credentialManager = credentialManager,
+                    scope = scope,
+                  )
+                },
+              )
             }
-
-            val (inventoryRepo, officialRepo, initialIsAdmin) = repositoryBundle
-            val shopViewModel: ShopViewModel = viewModel(
-              key = "shop_${user.uid}",
-              factory = ShopViewModelFactory(
-                repository = inventoryRepo,
-                officialCatalogRepository = officialRepo,
-                currentUserEmail = user.email,
-                initialIsAdmin = initialIsAdmin,
-                enableCloudSync = true,
-              ),
-            )
-            val aiChatViewModel: AiChatViewModel = viewModel(
-              key = "ai_${user.uid}",
-              factory = AiChatViewModelFactory(inventoryRepo),
-            )
-            val partLensViewModel: PartLensViewModel = viewModel(
-              key = "lens_${user.uid}",
-              factory = PartLensViewModelFactory(inventoryRepo),
-            )
-
-            ShopNavHost(
-              viewModel = shopViewModel,
-              aiChatViewModel = aiChatViewModel,
-              partLensViewModel = partLensViewModel,
-              onSignOut = {
-                signOutUser(
-                  credentialManager = credentialManager,
-                  scope = scope,
-                )
-              },
-            )
           }
         }
       }

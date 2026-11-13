@@ -82,7 +82,7 @@ fun HomeScreen(
   onOpenAiChat: () -> Unit,
   onOpenPartLens: () -> Unit,
   onOpenAdminPanel: () -> Unit,
-  onSignOut: () -> Unit,
+  onSignOut: (() -> Unit)?,
   modifier: Modifier = Modifier,
 ) {
   val searchQuery by viewModel.homeSearchQuery.collectAsStateWithLifecycle()

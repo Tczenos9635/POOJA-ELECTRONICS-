@@ -17,6 +17,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -124,5 +125,11 @@ class ExampleRobolectricTest {
     assertEquals(0, afterDecrease.stockQuantity)
     assertEquals(StockStatus.OUT_OF_STOCK, afterDecrease.stockStatus)
     assertTrue(calculateStockStatus(10, 3) == StockStatus.NORMAL)
+  }
+
+  @Test
+  fun `MainActivity launches without crashing`() {
+    val activity = Robolectric.buildActivity(MainActivity::class.java).create().get()
+    assertTrue(!activity.isFinishing)
   }
 }

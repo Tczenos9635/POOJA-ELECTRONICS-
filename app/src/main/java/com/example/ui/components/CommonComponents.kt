@@ -892,7 +892,7 @@ fun AccountMenuDialog(
   isAdmin: Boolean,
   onDismiss: () -> Unit,
   onOpenAdminPanel: (() -> Unit)?,
-  onSignOut: () -> Unit,
+  onSignOut: (() -> Unit)?,
 ) {
   AlertDialog(
     onDismissRequest = onDismiss,
@@ -926,11 +926,17 @@ fun AccountMenuDialog(
             verticalArrangement = Arrangement.spacedBy(6.dp),
           ) {
             Text(
-              text = email ?: "Signed in with Google",
+              text = email ?: if (onSignOut == null) "Local Shop Mode (Offline)" else "Signed in with Google",
               style = MaterialTheme.typography.titleSmall,
               color = MaterialTheme.colorScheme.onSurface,
             )
-            if (isAdmin) {
+            if (onSignOut == null) {
+              Text(
+                text = "Inventory is saved locally on this device. Cloud sync & AI features require google-services.json.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+              )
+            } else if (isAdmin) {
               OfficialBadge(label = "Verified Official Admin")
             } else {
               Text(
@@ -972,22 +978,24 @@ fun AccountMenuDialog(
       }
     },
     confirmButton = {
-      OutlinedButton(
-        onClick = {
-          onDismiss()
-          onSignOut()
-        },
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = StockOutText),
-        border = BorderStroke(1.dp, StockOutText.copy(alpha = 0.5f)),
-        modifier = Modifier.testTag("account_sign_out_button"),
-      ) {
-        Icon(
-          imageVector = Icons.Rounded.Logout,
-          contentDescription = null,
-          modifier = Modifier.size(16.dp),
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(stringResource(R.string.action_sign_out))
+      if (onSignOut != null) {
+        OutlinedButton(
+          onClick = {
+            onDismiss()
+            onSignOut()
+          },
+          colors = ButtonDefaults.outlinedButtonColors(contentColor = StockOutText),
+          border = BorderStroke(1.dp, StockOutText.copy(alpha = 0.5f)),
+          modifier = Modifier.testTag("account_sign_out_button"),
+        ) {
+          Icon(
+            imageVector = Icons.Rounded.Logout,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+          )
+          Spacer(modifier = Modifier.width(6.dp))
+          Text(stringResource(R.string.action_sign_out))
+        }
       }
     },
   )
